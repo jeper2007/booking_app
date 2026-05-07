@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LuxStay — Discover Hotels</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <a href="/home" class="logo">Lux<span>Stay</span></a>
+    <div class="nav-links">
+      <a href="/home" class="active">Home</a>
+      <a href="/hotels">Hotels</a>
+      <a href="/my-bookings">My Bookings <span class="nav-badge">●</span></a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="color:rgba(255,255,255,.7);font-size:.9rem">Hi, {{ user }}!</span>
+      <a href="/logout" class="btn btn-primary btn-sm">Logout</a>
+    </div>
+  </nav>
+
+  <!-- HERO SEARCH -->
+  <section class="hero">
+    <div class="hero-bg" style="background-image:url('{{ url_for('static', filename='images/hero_bg.jpg') }}')"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1>Find Your Perfect Stay</h1>
+      <p>Explore top hotels across the Philippines — beach, city & mountain escapes</p>
+      <form action="/hotels" method="GET">
+        <div class="search-bar">
+          <div class="search-field">
+            <label>📍 Destination</label>
+            <input type="text" name="location" placeholder="Where are you going?">
+          </div>
+          <div class="s-div"></div>
+          <div class="search-field">
+            <label>🏨 Hotel Type</label>
+            <select name="type">
+              <option value="">Any type</option>
+              <option value="Beach">Beach</option>
+              <option value="City">City</option>
+              <option value="Mountain">Mountain</option>
+            </select>
+          </div>
+          <div class="s-div"></div>
+          <div class="search-field" style="flex:0 0 auto">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-primary">🔍 Search Hotels</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- DESTINATIONS -->
+  <section class="section" style="padding-bottom:0">
+    <div class="section-header">
+      <h2>🗺️ Popular Destinations</h2>
+      <a href="/hotels">All Destinations →</a>
+    </div>
+    <div class="dest-row">
+      {% for d in destinations %}
+      <a href="/hotels?location={{ d.name }}" class="dest-card" style="animation-delay:{{ loop.index0 * 0.1 }}s">
+        <div class="dest-circle">
+          <img src="{{ url_for('static', filename='images/' + d.image) }}" alt="{{ d.name }}">
+        </div>
+        <span>{{ d.name }}</span>
+      </a>
+      {% endfor %}
+      <a href="/hotels" class="dest-card" style="animation-delay:0.5s">
+        <div class="dest-circle"
+          style="background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center">
+          <span style="font-size:1.8rem">+</span>
+        </div>
+        <span>All</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- TOP HOTELS -->
+  <section class="section">
+    <div class="section-header">
+      <h2>⭐ Top Rated Hotels</h2>
+      <a href="/hotels">View All →</a>
+    </div>
+    <div class="type-filters" id="type-filters">
+      <button class="type-btn active" onclick="filterCards(this,'all')">All</button>
+      <button class="type-btn" onclick="filterCards(this,'Beach')">🏖️ Beach</button>
+      <button class="type-btn" onclick="filterCards(this,'City')">🏙️ City</button>
+      <button class="type-btn" onclick="filterCards(this,'Mountain')">⛰️ Mountain</button>
+    </div>
+    <div class="hotel-grid" id="hotel-grid">
+      {% for h in all_hotels %}
+      <div class="hotel-card" data-type="{{ h.type }}" style="animation-delay:{{ loop.index0 * 0.1 }}s">
+        <div class="c-img">
+          <img src="{{ url_for('static', filename='images/' + h.image) }}" alt="{{ h.name }}">
+        </div>
+        <div class="card-body">
+          <div class="card-type">{{ h.type }}</div>
+          <h3>{{ h.name }}</h3>
+          <div class="loc">📍 {{ h.location }}</div>
+          <p style="font-size:.82rem;color:#666;line-height:1.5;margin-bottom:12px">{{ h.description[:80] }}...</p>
+          <div class="card-footer2">
+            <div>
+              <div class="price">{{ h.price }}<small>/night</small></div>
+              <div class="stars">{% for i in range(h.rating|int) %}★{% endfor %} {{ h.rating }}</div>
+            </div>
+            <a href="/hotel/{{ h.name|urlencode }}" class="btn btn-primary btn-sm">View →</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="text-align:center;margin-top:32px">
+      <a href="/hotels" class="btn btn-outline">View All Hotels</a>
+    </div>
+  </section>
+
+  <!-- WHY CHOOSE US -->
+  <section class="section" style="background:#fff;margin:0;border-radius:0;padding:60px 40px">
+    <div class="section-header" style="justify-content:center;text-align:center;display:block;margin-bottom:36px">
+      <h2>Why Choose LuxStay?</h2>
+      <p style="color:#888;margin-top:8px">Trusted by 50,000+ travelers across the Philippines</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="ico">🏆</div>
+        <h3>Best Price Guarantee</h3>
+        <p>We match any lower price you find. Book with confidence knowing you're getting the best deal.</p>
+      </div>
+      <div class="feature-card">
+        <div class="ico">🛡️</div>
+        <h3>Secure Booking</h3>
+        <p>Your personal data and payments are fully protected with enterprise-grade security.</p>
+      </div>
+      <div class="feature-card">
+        <div class="ico">💬</div>
+        <h3>24/7 Support</h3>
+        <p>Our travel experts are available around the clock to assist you with any questions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MEMBERSHIP -->
+  <section class="section" style="padding:40px 40px 60px">
+    <div class="membership">
+      <h2>🎁 Join LuxStay Members</h2>
+      <p>Subscribe to get exclusive deals, early access to sales, and members-only perks.</p>
+      <div class="sub-row">
+        <input type="email" placeholder="Enter your email address">
+        <button class="btn btn-gold">Subscribe</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>
+      <h4>LuxStay</h4>
+      <p>Discover extraordinary hotels across the Philippines. Your perfect stay is just a click away.</p>
+    </div>
+    <div>
+      <h4>Quick Links</h4>
+      <a href="/home">Home</a>
+      <a href="/hotels">Hotels</a>
+      <a href="/my-bookings">My Bookings</a>
+    </div>
+    <div>
+      <h4>Destinations</h4>
+      <a href="/hotels?location=Manila">Manila</a>
+      <a href="/hotels?location=Cebu">Cebu</a>
+      <a href="/hotels?location=Boracay">Boracay</a>
+      <a href="/hotels?location=Baguio">Baguio</a>
+      <a href="/hotels?location=Palawan">Palawan</a>
+    </div>
+  </footer>
+  <div class="footer-bottom">© 2024 LuxStay Philippines. All rights reserved.</div>
+
+  <script>
+    function filterCards(btn, type) {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.hotel-card').forEach(card => {
+        const show = type === 'all' || card.dataset.type === type;
+        card.style.display = show ? 'block' : 'none';
+      });
+    }
+  </script>
+</body>
+
+</html>
