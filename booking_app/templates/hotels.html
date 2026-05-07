@@ -76,7 +76,7 @@
               <div>
                 <div class="price">{{ h.price }}<small>/night</small></div>
               </div>
-              <a href="/hotel/{{ h.name }}" class="btn btn-primary btn-sm">View Details →</a>
+              <a href="/hotel/{{ h.name|urlencode }}" class="btn btn-primary btn-sm">View Details →</a>
             </div>
           </div>
         </div>

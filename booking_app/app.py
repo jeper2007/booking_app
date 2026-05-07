@@ -274,10 +274,19 @@ def hotels():
 @app.route("/hotel/<name>")
 @login_required
 def hotel_detail(name):
-    hotel = next((h for h in hotels_data if h["name"] == name), None)
+    # Fix: Decode name and use robust matching
+    from urllib.parse import unquote
+    decoded_name = unquote(name).strip()
+    hotel = next((h for h in hotels_data if h["name"].lower() == decoded_name.lower()), None)
+    
+    if not hotel:
+        # Fallback: try matching without spaces if exact match fails
+        hotel = next((h for h in hotels_data if h["name"].replace(" ","").lower() == decoded_name.replace(" ","").lower()), None)
+        
     if not hotel:
         return redirect("/hotels")
-    others = [h for h in hotels_data if h["name"] != name][:3]
+        
+    others = [h for h in hotels_data if h["name"] != hotel["name"]][:3]
     return render_template("hotel_detail.html",
                            hotel=hotel,
                            others=others,
