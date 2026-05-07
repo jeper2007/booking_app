@@ -314,25 +314,34 @@ def confirm():
     check_out  = request.form.get("check_out", "")
     guests     = request.form.get("guests", 1)
     room_type  = request.form.get("room_type", "")
-    price      = request.form.get("price", "")
+    price_str  = request.form.get("price", "")
 
-    # Validate required fields
     if not hotel_name or not check_in or not check_out:
         return redirect("/hotels")
 
-    ref_code = "LX" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    hotel    = next((h for h in hotels_data if h["name"] == hotel_name), None)
+    # Calculate Nights
+    from datetime import datetime
+    try:
+        d1 = datetime.strptime(check_in, "%Y-%m-%d")
+        d2 = datetime.strptime(check_out, "%Y-%m-%d")
+        nights = (d2 - d1).days
+        if nights < 1: nights = 1
+    except:
+        nights = 1
 
-    if not hotel:
-        return redirect("/hotels")
+    price_val = extract_price_value(price_str)
+    total_price = price_val * nights
+    ref_code = "LX" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    
+    hotel = next((h for h in hotels_data if h["name"] == hotel_name), None)
+    if not hotel: return redirect("/hotels")
 
     conn = get_db()
     c    = conn.cursor()
-    price_val = extract_price_value(price)
     c.execute("""INSERT INTO bookings(user,hotel,location,check_in,check_out,guests,room_type,price,ref_code,status,price_value)
                  VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
               (session["user"], hotel_name, hotel["location"],
-               check_in, check_out, guests, room_type, price, ref_code, "pending", price_val))
+               check_in, check_out, guests, room_type, f"₱{total_price:,.0f}", ref_code, "pending", total_price))
     conn.commit()
     conn.close()
 
@@ -341,8 +350,9 @@ def confirm():
                            check_in=check_in,
                            check_out=check_out,
                            guests=guests,
+                           nights=nights,
                            room_type=room_type,
-                           price=price,
+                           total_price=f"₱{total_price:,.0f}",
                            ref_code=ref_code,
                            user=session.get("name", ""),
                            others=[h for h in hotels_data if h["name"] != hotel_name][:3])
