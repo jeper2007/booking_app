@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LuxStay — Browse Hotels</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <nav class="navbar">
+    <a href="/home" class="logo">Lux<span>Stay</span></a>
+    <div class="nav-links">
+      <a href="/home">Home</a>
+      <a href="/hotels" class="active">Hotels</a>
+      <a href="/my-bookings">My Bookings</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      {% if user %}<span style="color:rgba(255,255,255,.7);font-size:.9rem">Hi, {{ user }}!</span>{% endif %}
+      <a href="/logout" class="btn btn-primary btn-sm">Logout</a>
+    </div>
+  </nav>
+
+  <div class="page-hero">
+    <h1>🏨 Browse All Hotels</h1>
+    <p>{{ hotels|length }} hotels found{% if query %} in <strong>{{ query }}</strong>{% endif %}</p>
+  </div>
+
+  <div class="hotels-layout">
+    <!-- SIDEBAR -->
+    <aside class="filter-sidebar">
+      <h3>Filters</h3>
+      <form action="/hotels" method="GET" id="filter-form">
+        <div class="f-group">
+          <h4>Destination</h4>
+          <input type="text" name="location" value="{{ query }}" placeholder="City or area"
+            style="width:100%;padding:8px 12px;border:2px solid #eee;border-radius:8px;font-family:inherit;font-size:.87rem;outline:none">
+        </div>
+        <div class="f-group" style="margin-top:16px">
+          <h4>Hotel Type</h4>
+          <label><input type="radio" name="type" value="" {% if not htype %}checked{% endif %}> All Types</label>
+          <label><input type="radio" name="type" value="Beach" {% if htype=='Beach' %}checked{% endif %}> 🏖️
+            Beach</label>
+          <label><input type="radio" name="type" value="City" {% if htype=='City' %}checked{% endif %}> 🏙️ City</label>
+          <label><input type="radio" name="type" value="Mountain" {% if htype=='Mountain' %}checked{% endif %}> ⛰️
+            Mountain</label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:16px">Apply
+          Filters</button>
+        <a href="/hotels" class="btn btn-outline" style="width:100%;justify-content:center;margin-top:10px">Clear</a>
+      </form>
+    </aside>
+
+    <!-- HOTEL LIST -->
+    <div>
+      {% if hotels %}
+      <div class="hotel-list">
+        {% for h in hotels %}
+        <div class="h-list-card" style="animation-delay:{{ loop.index0 * 0.08 }}s">
+          <img src="{{ url_for('static', filename='images/' + h.image) }}" alt="{{ h.name }}">
+          <div class="h-list-body">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <span class="card-type">{{ h.type }}</span>
+                <span class="stars">{% for i in range(h.rating|int) %}★{% endfor %} {{ h.rating }}</span>
+              </div>
+              <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:4px">{{ h.name }}</h3>
+              <div class="loc">📍 {{ h.location }}</div>
+              <p style="font-size:.85rem;color:#666;line-height:1.55;margin-top:10px">{{ h.description }}</p>
+              <div class="amenity-chips" style="margin-top:10px">
+                {% for a in h.amenities[:4] %}<span class="chip">{{ a }}</span>{% endfor %}
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+              <div>
+                <div class="price">{{ h.price }}<small>/night</small></div>
+              </div>
+              <a href="/hotel/{{ h.name }}" class="btn btn-primary btn-sm">View Details →</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div style="font-size:3rem;margin-bottom:16px">🔍</div>
+        <h3 style="margin-bottom:8px">No hotels found</h3>
+        <p>Try a different destination or remove filters</p>
+        <a href="/hotels" class="btn btn-primary" style="margin-top:16px">Browse All Hotels</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <footer>
+    <div>
+      <h4>LuxStay</h4>
+      <p>Find your perfect stay across the Philippines.</p>
+    </div>
+    <div>
+      <h4>Quick Links</h4><a href="/home">Home</a><a href="/hotels">Hotels</a><a href="/my-bookings">My Bookings</a>
+    </div>
+    <div>
+      <h4>Contact</h4>
+      <p>support@luxstay.ph</p>
+      <p>+63 2 8888 0000</p>
+    </div>
+  </footer>
+  <div class="footer-bottom">© 2024 LuxStay Philippines.</div>
+</body>
+
+</html>

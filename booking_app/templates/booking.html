@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuxStay — Book {{ hotel.name }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="/home" class="logo">Lux<span>Stay</span></a>
+  <div class="nav-links">
+    <a href="/home">Home</a>
+    <a href="/hotels">Hotels</a>
+    <a href="/my-bookings">My Bookings</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span style="color:rgba(255,255,255,.7);font-size:.9rem">Hi, {{ user }}!</span>
+    <a href="/logout" class="btn btn-primary btn-sm">Logout</a>
+  </div>
+</nav>
+
+<div class="booking-page">
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active">
+      <div class="step-num">1</div>
+      <span>Your Info</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <span>Payment</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <span>Confirmed</span>
+    </div>
+  </div>
+
+  <div class="booking-layout">
+    <!-- FORM -->
+    <div class="form-card">
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:20px">👤 Guest Information</h2>
+      <form method="POST" action="/confirm" id="booking-form">
+        <input type="hidden" name="hotel" value="{{ hotel.name }}">
+        <input type="hidden" name="room_type" value="{{ room.type }}">
+        <input type="hidden" name="price" value="{{ room.price }}">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" name="first_name" placeholder="Juan" required>
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" name="last_name" placeholder="dela Cruz" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" name="email" placeholder="{{ email }}" value="{{ email }}" required>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" name="phone" placeholder="+63 900 000 0000" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Check-in Date</label>
+            <input type="date" name="check_in" id="check_in" required>
+          </div>
+          <div class="form-group">
+            <label>Check-out Date</label>
+            <input type="date" name="check_out" id="check_out" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Number of Guests</label>
+          <input type="number" name="guests" min="1" max="10" value="1" required>
+        </div>
+
+        <div style="margin-top:24px;padding:16px;background:#f8f9fa;border-radius:10px;font-size:.85rem;color:#666">
+          🔒 Your data is secure and encrypted. By booking you agree to our Terms of Service.
+        </div>
+
+        <div id="booking-form-error" style="display:none;background:#fee2e2;color:#c0392b;padding:10px 14px;border-radius:8px;font-size:.85rem;margin-top:12px;border-left:3px solid #e74c3c;animation:fadeUp .3s ease"></div>
+
+        <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:20px;font-size:1rem;padding:14px" onclick="showPayment()">
+          Continue to Payment →
+        </button>
+      </form>
+
+      <!-- PAYMENT SECTION (hidden initially) -->
+      <div id="payment-section" style="display:none;margin-top:24px;border-top:2px solid var(--light);padding-top:24px">
+        <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:20px">💳 Payment Details</h2>
+        <div class="form-group">
+          <label>Card Number</label>
+          <input type="text" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCard(this)">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expiry Date</label>
+            <input type="text" placeholder="MM/YY" maxlength="5">
+          </div>
+          <div class="form-group">
+            <label>CVV</label>
+            <input type="text" placeholder="123" maxlength="3">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Cardholder Name</label>
+          <input type="text" placeholder="Juan dela Cruz">
+        </div>
+        <button type="submit" form="booking-form" class="btn btn-gold" style="width:100%;justify-content:center;margin-top:8px;font-size:1rem;padding:14px">
+          ✅ Confirm Booking
+        </button>
+      </div>
+    </div>
+
+    <!-- BOOKING SUMMARY -->
+    <div class="booking-summary">
+      <div class="bsum-title">📋 Booking Summary</div>
+      <img src="{{ url_for('static', filename='images/' + hotel.image) }}" alt="{{ hotel.name }}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:16px">
+      <div class="sum-row"><span class="lbl">Hotel</span><span class="val">{{ hotel.name }}</span></div>
+      <div class="sum-row"><span class="lbl">Location</span><span class="val">📍 {{ hotel.location }}</span></div>
+      <div class="sum-row"><span class="lbl">Room Type</span><span class="val">{{ room.type }}</span></div>
+      <div class="sum-row"><span class="lbl">Description</span><span class="val" style="font-size:.8rem">{{ room.desc }}</span></div>
+      <div class="s-divider"></div>
+      <div class="sum-row">
+        <span class="lbl">Price per Night</span>
+        <span class="val" style="color:var(--gold)">{{ room.price }}</span>
+      </div>
+      <div class="s-divider"></div>
+      <div style="font-size:.78rem;opacity:.6;margin-top:8px;line-height:1.6">
+        ✅ Free cancellation within 24h<br>
+        🔒 Secure & encrypted payment<br>
+        💬 24/7 guest support
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Set min dates
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('check_in').min = today;
+document.getElementById('check_out').min = today;
+document.getElementById('check_in').addEventListener('change', function() {
+  const nextDay = new Date(this.value);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const minOut = nextDay.toISOString().split('T')[0];
+  document.getElementById('check_out').min = minOut;
+  if (document.getElementById('check_out').value && document.getElementById('check_out').value <= this.value) {
+    document.getElementById('check_out').value = minOut;
+  }
+});
+
+function showPayment() {
+  const form = document.getElementById('booking-form');
+  const inputs = form.querySelectorAll('input[required]');
+  const errDiv = document.getElementById('booking-form-error');
+  let missing = [];
+  inputs.forEach(i => {
+    if (!i.value) {
+      i.style.borderColor = 'var(--accent)';
+      missing.push(i.name.replace('_', ' '));
+    } else {
+      i.style.borderColor = '#e8e8e8';
+    }
+  });
+  // Extra: check-out must be after check-in
+  const ci = document.getElementById('check_in').value;
+  const co = document.getElementById('check_out').value;
+  if (ci && co && co <= ci) {
+    document.getElementById('check_out').style.borderColor = 'var(--accent)';
+    missing.push('check-out (must be after check-in)');
+  }
+  if (missing.length > 0) {
+    errDiv.textContent = '⚠️ Please fill in: ' + missing.join(', ');
+    errDiv.style.display = 'block';
+    errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  errDiv.style.display = 'none';
+  const paySection = document.getElementById('payment-section');
+  paySection.style.display = 'block';
+  paySection.style.opacity = '0';
+  paySection.style.transform = 'translateY(12px)';
+  requestAnimationFrame(() => {
+    paySection.style.transition = 'opacity .4s ease, transform .4s ease';
+    paySection.style.opacity = '1';
+    paySection.style.transform = 'translateY(0)';
+  });
+  paySection.scrollIntoView({ behavior: 'smooth' });
+  // Animate step 2 active
+  const steps = document.querySelectorAll('.step');
+  const lines = document.querySelectorAll('.step-line');
+  if (steps[1]) steps[1].classList.add('active');
+  if (lines[0]) lines[0].style.background = 'var(--accent)';
+}
+
+function formatCard(input) {
+  let val = input.value.replace(/\D/g, '').substring(0, 16);
+  input.value = val.replace(/(.{4})/g, '$1 ').trim();
+}
+</script>
+</body>
+</html>

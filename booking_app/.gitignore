@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.vscode/
+.env
+# Keep database.db if they want to seed Vercel, though usually ignored.
+# For this specific task, the user wants the database pushed to seed Vercel.

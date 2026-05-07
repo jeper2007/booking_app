@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LuxStay — Booking Confirmed!</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="/home" class="logo">Lux<span>Stay</span></a>
+  <div class="nav-links">
+    <a href="/home">Home</a>
+    <a href="/hotels">Hotels</a>
+    <a href="/my-bookings">My Bookings</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span style="color:rgba(255,255,255,.7);font-size:.9rem">Hi, {{ user }}!</span>
+    <a href="/logout" class="btn btn-primary btn-sm">Logout</a>
+  </div>
+</nav>
+
+<div class="confirm-page">
+  <!-- STEP INDICATOR -->
+  <div class="steps" style="margin-bottom:28px">
+    <div class="step done"><div class="step-num">✓</div><span>Your Info</span></div>
+    <div class="step-line done"></div>
+    <div class="step done"><div class="step-num">✓</div><span>Payment</span></div>
+    <div class="step-line done"></div>
+    <div class="step active"><div class="step-num">3</div><span>Confirmed</span></div>
+  </div>
+
+  <!-- BANNER -->
+  <div class="confirm-banner">
+    <div style="font-size:3rem;margin-bottom:8px">🎉</div>
+    <h1>Booking Confirmed!</h1>
+    <p style="opacity:.9;font-size:1.05rem">Thank you! Your reservation is all set. See you there!</p>
+    <div class="ref-badge">Ref: {{ ref_code }}</div>
+  </div>
+
+  <!-- DETAILS GRID -->
+  <div class="confirm-layout">
+    <div class="c-card">
+      <h3>🏨 Hotel Details</h3>
+      <img src="{{ url_for('static', filename='images/' + hotel.image) }}" alt="{{ hotel.name }}" style="width:100%;height:160px;object-fit:cover;border-radius:10px;margin-bottom:16px">
+      <div class="d-row"><span class="dk">Hotel</span><span class="dv">{{ hotel.name }}</span></div>
+      <div class="d-row"><span class="dk">Location</span><span class="dv">📍 {{ hotel.location }}</span></div>
+      <div class="d-row"><span class="dk">Room Type</span><span class="dv">{{ room_type }}</span></div>
+      <div class="d-row"><span class="dk">Price</span><span class="dv" style="color:var(--accent)">{{ price }}</span></div>
+    </div>
+    <div class="c-card">
+      <h3>📅 Stay Details</h3>
+      <div class="d-row"><span class="dk">Check-in</span><span class="dv">{{ check_in }}</span></div>
+      <div class="d-row"><span class="dk">Check-out</span><span class="dv">{{ check_out }}</span></div>
+      <div class="d-row"><span class="dk">Guests</span><span class="dv">{{ guests }} guest(s)</span></div>
+      <div class="d-row"><span class="dk">Reference</span><span class="dv" style="color:var(--accent)">{{ ref_code }}</span></div>
+      <div style="margin-top:20px;padding:14px;background:#f0fff4;border-radius:10px;font-size:.85rem;color:#27ae60;border-left:3px solid #27ae60">
+        ✅ A confirmation email will be sent to your registered email address.
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <a href="/my-bookings" class="btn btn-outline btn-sm" style="flex:1;justify-content:center">📋 View Booking</a>
+        <button onclick="window.print()" class="btn btn-sm" style="flex:1;background:#555;color:#fff;justify-content:center">🖨️ Print</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OTHER HOTELS -->
+  <div>
+    <h2 style="font-size:1.3rem;font-weight:700;margin-bottom:20px">Explore More Hotels</h2>
+    <div class="hotel-grid">
+      {% for h in others %}
+      <div class="hotel-card">
+        <div class="c-img"><img src="{{ url_for('static', filename='images/' + h.image) }}" alt="{{ h.name }}"></div>
+        <div class="card-body">
+          <div class="card-type">{{ h.type }}</div>
+          <h3>{{ h.name }}</h3>
+          <div class="loc">📍 {{ h.location }}</div>
+          <div class="card-footer2">
+            <div class="price">{{ h.price }}<small>/night</small></div>
+            <a href="/hotel/{{ h.name }}" class="btn btn-primary btn-sm">Book Again</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div><h4>LuxStay</h4><p>Your perfect stay awaits.</p></div>
+  <div><h4>Quick Links</h4><a href="/home">Home</a><a href="/hotels">Hotels</a><a href="/my-bookings">My Bookings</a></div>
+  <div><h4>Contact</h4><p>support@luxstay.ph</p></div>
+</footer>
+<div class="footer-bottom">© 2024 LuxStay Philippines.</div>
+</body>
+</html>
