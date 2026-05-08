@@ -1,56 +1,85 @@
 # pyrefly: ignore [missing-import]
 from flask import Flask, render_template, request, redirect, session, url_for
-import sqlite3, random, string, re, os
+import random, string, re, os
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "luxstay_secret_2024")
 
 # ── DATABASE ──────────────────────────────────────────────────────────────────
-IF_VERCEL = os.environ.get("VERCEL")
-if IF_VERCEL:
-    DB_PATH = "/tmp/database.db"
-    if not os.path.exists(DB_PATH):
-        try:
-            import shutil
-            SOURCE_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
-            if os.path.exists(SOURCE_DB):
-                shutil.copy(SOURCE_DB, DB_PATH)
-        except Exception:
-            pass
-else:
-    DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
+# If DATABASE_URL is set (Supabase/PostgreSQL on Vercel): use PostgreSQL.
+# Otherwise fall back to local SQLite for development.
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+USE_PG = bool(DATABASE_URL)
 
-def get_db():
-    db_dir = os.path.dirname(DB_PATH)
-    if db_dir and not os.path.exists(db_dir):
-        os.makedirs(db_dir, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+if USE_PG:
+    import psycopg2
+    import psycopg2.extras
+    PH = "%s"   # PostgreSQL placeholder
+    def get_db():
+        conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+        return conn
+    def _cursor(conn):
+        return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+else:
+    import sqlite3
+    PH = "?"    # SQLite placeholder
+    IF_VERCEL = os.environ.get("VERCEL")
+    if IF_VERCEL:
+        DB_PATH = "/tmp/database.db"
+        if not os.path.exists(DB_PATH):
+            try:
+                import shutil
+                SOURCE_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
+                if os.path.exists(SOURCE_DB):
+                    shutil.copy(SOURCE_DB, DB_PATH)
+            except Exception:
+                pass
+    else:
+        DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
+    def get_db():
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+    def _cursor(conn):
+        return conn.cursor()
 
 def init_db():
     conn = get_db()
-    c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS users(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE, password TEXT, name TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS bookings(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user TEXT, hotel TEXT, location TEXT,
-        check_in TEXT, check_out TEXT, guests INTEGER,
-        room_type TEXT, price TEXT, ref_code TEXT,
-        status TEXT DEFAULT 'pending', price_value REAL DEFAULT 0)""")
-    for col, defn in [("status","TEXT DEFAULT 'pending'"), ("price_value","REAL DEFAULT 0")]:
-        try:
-            c.execute(f"ALTER TABLE bookings ADD COLUMN {col} {defn}")
-        except Exception:
-            pass
-    c.execute("""CREATE TABLE IF NOT EXISTS admins(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE, password TEXT, name TEXT)""")
-    c.execute("SELECT COUNT(*) FROM admins")
-    if c.fetchone()[0] == 0:
-        c.execute("INSERT INTO admins(email,password,name) VALUES(?,?,?)",
+    c = _cursor(conn)
+    if USE_PG:
+        c.execute("""CREATE TABLE IF NOT EXISTS users(
+            id SERIAL PRIMARY KEY, email TEXT UNIQUE, password TEXT, name TEXT)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS bookings(
+            id SERIAL PRIMARY KEY, "user" TEXT, hotel TEXT, location TEXT,
+            check_in TEXT, check_out TEXT, guests INTEGER,
+            room_type TEXT, price TEXT, ref_code TEXT,
+            status TEXT DEFAULT 'pending', price_value REAL DEFAULT 0)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS admins(
+            id SERIAL PRIMARY KEY, email TEXT UNIQUE, password TEXT, name TEXT)""")
+    else:
+        c.execute("""CREATE TABLE IF NOT EXISTS users(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT, name TEXT)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS bookings(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT, hotel TEXT, location TEXT,
+            check_in TEXT, check_out TEXT, guests INTEGER,
+            room_type TEXT, price TEXT, ref_code TEXT,
+            status TEXT DEFAULT 'pending', price_value REAL DEFAULT 0)""")
+        for col, defn in [("status","TEXT DEFAULT 'pending'"),("price_value","REAL DEFAULT 0")]:
+            try:
+                c.execute(f"ALTER TABLE bookings ADD COLUMN {col} {defn}")
+            except Exception:
+                pass
+        c.execute("""CREATE TABLE IF NOT EXISTS admins(
+            id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT, name TEXT)""")
+    # Seed default admin if none exists
+    c.execute("SELECT COUNT(*) as cnt FROM admins")
+    row = c.fetchone()
+    cnt = row["cnt"] if USE_PG else row[0]
+    if cnt == 0:
+        c.execute(f"INSERT INTO admins(email,password,name) VALUES({PH},{PH},{PH})",
                   ("admin@luxstay.ph", "admin123", "LuxStay Admin"))
     conn.commit()
     conn.close()
@@ -155,16 +184,17 @@ def get_available_rooms(hotel_name, room_type=None):
     if not hotel:
         return {} if room_type is None else 0
     conn = get_db()
-    c = conn.cursor()
+    c = _cursor(conn)
     result = {}
+    col = '"user"' if USE_PG else 'user'
     for room in hotel["rooms"]:
         c.execute(
-            "SELECT COUNT(*) FROM bookings WHERE hotel=? AND room_type=? AND status != 'rejected'",
+            f"SELECT COUNT(*) as cnt FROM bookings WHERE hotel={PH} AND room_type={PH} AND status != 'rejected'",
             (hotel_name, room["type"])
         )
-        booked = c.fetchone()[0]
-        avail = max(0, room["total_rooms"] - booked)
-        result[room["type"]] = avail
+        row = c.fetchone()
+        booked = row["cnt"] if USE_PG else row[0]
+        result[room["type"]] = max(0, room["total_rooms"] - booked)
     conn.close()
     if room_type:
         return result.get(room_type, 0)
@@ -199,8 +229,8 @@ def login():
         email    = request.form["email"].strip()
         password = request.form["password"]
         next_url = request.form.get("next", "").strip()
-        conn = get_db(); c = conn.cursor()
-        c.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+        conn = get_db(); c = _cursor(conn)
+        c.execute(f"SELECT * FROM users WHERE email={PH} AND password={PH}", (email, password))
         user = c.fetchone(); conn.close()
         if user:
             session["user"] = email
@@ -220,11 +250,11 @@ def register():
     if not name or not email or not password:
         return redirect("/?reg_error=missing")
     try:
-        conn = get_db(); c = conn.cursor()
-        c.execute("INSERT INTO users(email,password,name) VALUES(?,?,?)", (email, password, name))
+        conn = get_db(); c = _cursor(conn)
+        c.execute(f"INSERT INTO users(email,password,name) VALUES({PH},{PH},{PH})", (email, password, name))
         conn.commit(); conn.close()
         return redirect("/?registered=1")
-    except sqlite3.IntegrityError:
+    except Exception:
         return redirect("/?reg_error=exists")
 
 @app.route("/home")
@@ -278,6 +308,11 @@ def book(hotel_name):
         return redirect("/hotels")
     room_type = unquote_plus(request.args.get("room", hotel["rooms"][0]["type"]).strip())
     room = next((r for r in hotel["rooms"] if r["type"].lower() == room_type.lower()), hotel["rooms"][0])
+    conn = get_db()
+    c = _cursor(conn)
+    c.execute(f"SELECT COUNT(*) as cnt FROM bookings WHERE hotel={PH} AND room_type={PH} AND status != 'rejected'", (hotel_name, room["type"]))
+    avail_row = c.fetchone()
+    conn.close()
     avail = get_available_rooms(hotel["name"], room["type"])
     if avail <= 0:
         return redirect(f"/hotel/{hotel_name}?no_avail=1")
@@ -299,10 +334,11 @@ def confirm():
     if not hotel:
         return redirect("/hotels")
     ref_code = "LX" + "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    conn = get_db(); c = conn.cursor()
+    conn = get_db(); c = _cursor(conn)
     price_val = extract_price_value(price)
-    c.execute("""INSERT INTO bookings(user,hotel,location,check_in,check_out,guests,room_type,price,ref_code,status,price_value)
-                 VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+    user_col = '"user"' if USE_PG else 'user'
+    c.execute(f"""INSERT INTO bookings({user_col},hotel,location,check_in,check_out,guests,room_type,price,ref_code,status,price_value)
+                 VALUES({PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH},{PH})""",
               (session["user"], hotel_name, hotel["location"],
                check_in, check_out, guests, room_type, price, ref_code, "pending", price_val))
     conn.commit(); conn.close()
@@ -314,8 +350,9 @@ def confirm():
 @app.route("/my-bookings")
 @login_required
 def my_bookings():
-    conn = get_db(); c = conn.cursor()
-    c.execute("SELECT * FROM bookings WHERE user=? ORDER BY id DESC", (session["user"],))
+    conn = get_db(); c = _cursor(conn)
+    user_col = '"user"' if USE_PG else 'user'
+    c.execute(f"SELECT * FROM bookings WHERE {user_col}={PH} ORDER BY id DESC", (session["user"],))
     bookings = [dict(row) for row in c.fetchall()]
     conn.close()
     return render_template("my_bookings.html", bookings=bookings, user=session.get("name",""))
@@ -323,8 +360,9 @@ def my_bookings():
 @app.route("/delete-booking/<int:booking_id>", methods=["POST"])
 @login_required
 def delete_booking(booking_id):
-    conn = get_db(); c = conn.cursor()
-    c.execute("DELETE FROM bookings WHERE id=? AND user=?", (booking_id, session["user"]))
+    conn = get_db(); c = _cursor(conn)
+    user_col = '"user"' if USE_PG else 'user'
+    c.execute(f"DELETE FROM bookings WHERE id={PH} AND {user_col}={PH}", (booking_id, session["user"]))
     conn.commit(); conn.close()
     return redirect("/my-bookings")
 
@@ -342,8 +380,8 @@ def admin_login():
     error = None
     if request.method == "POST":
         email = request.form["email"].strip(); password = request.form["password"]
-        conn = get_db(); c = conn.cursor()
-        c.execute("SELECT * FROM admins WHERE email=? AND password=?", (email, password))
+        conn = get_db(); c = _cursor(conn)
+        c.execute(f"SELECT * FROM admins WHERE email={PH} AND password={PH}", (email, password))
         admin = c.fetchone(); conn.close()
         if admin:
             session["is_admin"] = True; session["admin_name"] = admin["name"]
@@ -354,19 +392,26 @@ def admin_login():
 @app.route("/admin")
 @admin_required
 def admin_dashboard():
-    conn = get_db(); c = conn.cursor()
-    def q(sql, *a): c.execute(sql, a); return c.fetchone()[0]
-    total_bookings    = q("SELECT COUNT(*) FROM bookings")
-    total_pending     = q("SELECT COUNT(*) FROM bookings WHERE status='pending'")
-    total_accepted    = q("SELECT COUNT(*) FROM bookings WHERE status='accepted'")
-    total_rejected    = q("SELECT COUNT(*) FROM bookings WHERE status='rejected'")
-    total_users_booked= q("SELECT COUNT(DISTINCT user) FROM bookings")
-    total_users       = q("SELECT COUNT(*) FROM users")
-    total_profit      = q("SELECT COALESCE(SUM(price_value),0) FROM bookings WHERE status='accepted'")
+    conn = get_db(); c = _cursor(conn)
+    user_col = '"user"' if USE_PG else 'user'
+    def q(sql):
+        c.execute(sql)
+        row = c.fetchone()
+        return row["cnt"] if USE_PG else row[0]
+    total_bookings    = q("SELECT COUNT(*) as cnt FROM bookings")
+    total_pending     = q("SELECT COUNT(*) as cnt FROM bookings WHERE status='pending'")
+    total_accepted    = q("SELECT COUNT(*) as cnt FROM bookings WHERE status='accepted'")
+    total_rejected    = q("SELECT COUNT(*) as cnt FROM bookings WHERE status='rejected'")
+    total_users_booked= q(f"SELECT COUNT(DISTINCT {user_col}) as cnt FROM bookings")
+    total_users       = q("SELECT COUNT(*) as cnt FROM users")
+    c.execute("SELECT COALESCE(SUM(price_value),0) as s FROM bookings WHERE status='accepted'")
+    profit_row = c.fetchone()
+    total_profit = profit_row["s"] if USE_PG else profit_row[0]
     c.execute("SELECT hotel, COUNT(*) as cnt FROM bookings GROUP BY hotel ORDER BY cnt DESC LIMIT 1")
     r = c.fetchone(); top_hotel = r["hotel"] if r else "—"
-    c.execute("""SELECT b.*, u.name as guest_name FROM bookings b
-                 LEFT JOIN users u ON b.user=u.email ORDER BY b.id DESC""")
+    join_col = 'b."user"' if USE_PG else 'b.user'
+    c.execute(f"""SELECT b.*, u.name as guest_name FROM bookings b
+                 LEFT JOIN users u ON {join_col}=u.email ORDER BY b.id DESC""")
     bookings = [dict(r) for r in c.fetchall()]
     c.execute("SELECT * FROM users ORDER BY id DESC")
     users = [dict(r) for r in c.fetchall()]
@@ -388,33 +433,34 @@ def admin_dashboard():
 @app.route("/admin/booking/<int:bid>/accept", methods=["POST"])
 @admin_required
 def admin_accept_booking(bid):
-    conn = get_db(); c = conn.cursor()
-    c.execute("UPDATE bookings SET status='accepted' WHERE id=?", (bid,))
+    conn = get_db(); c = _cursor(conn)
+    c.execute(f"UPDATE bookings SET status='accepted' WHERE id={PH}", (bid,))
     conn.commit(); conn.close(); return redirect("/admin")
 
 @app.route("/admin/booking/<int:bid>/reject", methods=["POST"])
 @admin_required
 def admin_reject_booking(bid):
-    conn = get_db(); c = conn.cursor()
-    c.execute("UPDATE bookings SET status='rejected' WHERE id=?", (bid,))
+    conn = get_db(); c = _cursor(conn)
+    c.execute(f"UPDATE bookings SET status='rejected' WHERE id={PH}", (bid,))
     conn.commit(); conn.close(); return redirect("/admin")
 
 @app.route("/admin/delete-booking/<int:bid>", methods=["POST"])
 @admin_required
 def admin_delete_booking(bid):
-    conn = get_db(); c = conn.cursor()
-    c.execute("DELETE FROM bookings WHERE id=?", (bid,))
+    conn = get_db(); c = _cursor(conn)
+    c.execute(f"DELETE FROM bookings WHERE id={PH}", (bid,))
     conn.commit(); conn.close(); return redirect("/admin")
 
 @app.route("/admin/delete-user/<int:uid>", methods=["POST"])
 @admin_required
 def admin_delete_user(uid):
-    conn = get_db(); c = conn.cursor()
-    c.execute("SELECT email FROM users WHERE id=?", (uid,))
+    conn = get_db(); c = _cursor(conn)
+    user_col = '"user"' if USE_PG else 'user'
+    c.execute(f"SELECT email FROM users WHERE id={PH}", (uid,))
     row = c.fetchone()
     if row:
-        c.execute("DELETE FROM bookings WHERE user=?", (row["email"],))
-    c.execute("DELETE FROM users WHERE id=?", (uid,))
+        c.execute(f"DELETE FROM bookings WHERE {user_col}={PH}", (row["email"],))
+    c.execute(f"DELETE FROM users WHERE id={PH}", (uid,))
     conn.commit(); conn.close(); return redirect("/admin")
 
 @app.route("/admin/logout")
