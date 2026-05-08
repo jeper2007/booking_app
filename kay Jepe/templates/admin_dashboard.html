@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LuxStay Admin Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    :root {
+      --adm-bg: #0d0d1a;
+      --adm-card: #13132b;
+      --adm-border: rgba(255, 255, 255, .08);
+      --adm-text: rgba(255, 255, 255, .85);
+      --adm-sub: rgba(255, 255, 255, .45);
+      --green: #2ecc71;
+      --red: #e74c3c;
+      --yellow: #f39c12;
+      --blue: #3498db;
+      --gold: #f5a623;
+      --transition: .25s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: Inter, sans-serif;
+      background: var(--adm-bg);
+      color: var(--adm-text);
+      min-height: 100vh;
+      display: flex
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 240px;
+      min-height: 100vh;
+      background: #0a0a18;
+      border-right: 1px solid var(--adm-border);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      flex-shrink: 0
+    }
+
+    .sb-logo {
+      padding: 28px 24px;
+      border-bottom: 1px solid var(--adm-border)
+    }
+
+    .sb-logo h2 {
+      color: #fff;
+      font-size: 1.4rem;
+      font-weight: 800
+    }
+
+    .sb-logo h2 span {
+      color: var(--gold)
+    }
+
+    .sb-logo p {
+      color: var(--adm-sub);
+      font-size: .75rem;
+      margin-top: 4px
+    }
+
+    .sb-nav {
+      padding: 20px 0;
+      flex: 1
+    }
+
+    .sb-label {
+      padding: 8px 24px;
+      font-size: .67rem;
+      font-weight: 700;
+      color: rgba(255, 255, 255, .25);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 8px
+    }
+
+    .sb-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      color: var(--adm-sub);
+      font-size: .88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+      border-left: 3px solid transparent
+    }
+
+    .sb-link:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, .05);
+      border-left-color: var(--gold)
+    }
+
+    .sb-link.active {
+      color: #fff;
+      background: rgba(245, 166, 35, .08);
+      border-left-color: var(--gold)
+    }
+
+    .sb-link .ico {
+      font-size: 1.1rem;
+      width: 22px;
+      text-align: center
+    }
+
+    .sb-bottom {
+      padding: 20px 24px;
+      border-top: 1px solid var(--adm-border)
+    }
+
+    .admin-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px
+    }
+
+    .admin-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), #e67e22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: .9rem;
+      color: #fff;
+      flex-shrink: 0
+    }
+
+    .admin-info-text p {
+      font-size: .82rem;
+      font-weight: 600;
+      color: #fff
+    }
+
+    .admin-info-text small {
+      font-size: .72rem;
+      color: var(--adm-sub)
+    }
+
+    .sb-logout {
+      width: 100%;
+      padding: 9px;
+      background: rgba(233, 69, 96, .15);
+      border: 1px solid rgba(233, 69, 96, .25);
+      color: #ff6b81;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition)
+    }
+
+    .sb-logout:hover {
+      background: #e74c3c;
+      color: #fff;
+      border-color: #e74c3c
+    }
+
+    /* MAIN */
+    .adm-main {
+      flex: 1;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column
+    }
+
+    .adm-topbar {
+      background: #0a0a18;
+      border-bottom: 1px solid var(--adm-border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100
+    }
+
+    .adm-topbar h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .adm-topbar p {
+      font-size: .82rem;
+      color: var(--adm-sub);
+      margin-top: 2px
+    }
+
+    .tab-badge {
+      background: rgba(245, 166, 35, .2);
+      color: var(--gold);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 700
+    }
+
+    .adm-content {
+      padding: 28px 32px;
+      flex: 1
+    }
+
+    /* STAT CARDS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px
+    }
+
+    .stat-card {
+      background: var(--adm-card);
+      border: 1px solid var(--adm-border);
+      border-radius: 16px;
+      padding: 22px 20px;
+      transition: var(--transition);
+      animation: fadeUp .5s ease both
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 255, 255, .15)
+    }
+
+    .stat-icon {
+      font-size: 1.6rem;
+      margin-bottom: 10px
+    }
+
+    .stat-val {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1
+    }
+
+    .stat-lbl {
+      font-size: .78rem;
+      color: var(--adm-sub);
+      margin-top: 6px;
+      font-weight: 500
+    }
+
+    .stat-card.green .stat-val {
+      color: var(--green)
+    }
+
+    .stat-card.red .stat-val {
+      color: var(--red)
+    }
+
+    .stat-card.yellow .stat-val {
+      color: var(--yellow)
+    }
+
+    .stat-card.blue .stat-val {
+      color: var(--blue)
+    }
+
+    .stat-card.gold .stat-val {
+      color: var(--gold)
+    }
+
+    /* SECTION */
+    .adm-section {
+      background: var(--adm-card);
+      border: 1px solid var(--adm-border);
+      border-radius: 16px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      animation: fadeUp .5s ease both
+    }
+
+    .adm-sec-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--adm-border)
+    }
+
+    .adm-sec-hdr h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .adm-sec-hdr span {
+      font-size: .8rem;
+      color: var(--adm-sub)
+    }
+
+    /* TABLE */
+    .adm-table-wrap {
+      overflow-x: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    thead {
+      background: rgba(255, 255, 255, .04)
+    }
+
+    th {
+      padding: 13px 16px;
+      text-align: left;
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--adm-sub);
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      white-space: nowrap
+    }
+
+    td {
+      padding: 13px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, .05);
+      font-size: .85rem;
+      color: var(--adm-text);
+      vertical-align: middle
+    }
+
+    tr:last-child td {
+      border-bottom: none
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, .02)
+    }
+
+    /* STATUS BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .73rem;
+      font-weight: 700;
+      letter-spacing: .3px
+    }
+
+    .badge-pending {
+      background: rgba(243, 156, 18, .15);
+      color: var(--yellow);
+      border: 1px solid rgba(243, 156, 18, .3)
+    }
+
+    .badge-accepted {
+      background: rgba(46, 204, 113, .15);
+      color: var(--green);
+      border: 1px solid rgba(46, 204, 113, .3)
+    }
+
+    .badge-rejected {
+      background: rgba(231, 76, 60, .15);
+      color: var(--red);
+      border: 1px solid rgba(231, 76, 60, .3)
+    }
+
+    /* ACTION BUTTONS */
+    .act-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 13px;
+      border-radius: 8px;
+      border: none;
+      font-size: .78rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition)
+    }
+
+    .act-btn:hover {
+      transform: translateY(-1px)
+    }
+
+    .btn-accept {
+      background: rgba(46, 204, 113, .15);
+      color: var(--green);
+      border: 1px solid rgba(46, 204, 113, .3)
+    }
+
+    .btn-accept:hover {
+      background: var(--green);
+      color: #fff
+    }
+
+    .btn-reject {
+      background: rgba(231, 76, 60, .15);
+      color: var(--red);
+      border: 1px solid rgba(231, 76, 60, .3)
+    }
+
+    .btn-reject:hover {
+      background: var(--red);
+      color: #fff
+    }
+
+    .btn-del {
+      background: rgba(255, 255, 255, .06);
+      color: var(--adm-sub);
+      border: 1px solid var(--adm-border)
+    }
+
+    .btn-del:hover {
+      background: #e74c3c;
+      color: #fff;
+      border-color: #e74c3c
+    }
+
+    /* PROFIT BAR */
+    .profit-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, .05)
+    }
+
+    .profit-row:last-child {
+      border-bottom: none
+    }
+
+    .profit-hotel {
+      flex: 1;
+      font-size: .87rem;
+      font-weight: 600;
+      color: var(--adm-text)
+    }
+
+    .profit-amount {
+      font-size: .87rem;
+      font-weight: 700;
+      color: var(--green);
+      min-width: 110px;
+      text-align: right
+    }
+
+    .profit-bar-wrap {
+      flex: 2;
+      height: 8px;
+      background: rgba(255, 255, 255, .06);
+      border-radius: 4px;
+      overflow: hidden
+    }
+
+    .profit-bar {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--green), #27ae60);
+      transition: width .8s ease
+    }
+
+    /* TABS */
+    .tab-row {
+      display: flex;
+      gap: 8px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--adm-border);
+      background: rgba(255, 255, 255, .02)
+    }
+
+    .tab-pill {
+      padding: 7px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--adm-border);
+      background: transparent;
+      color: var(--adm-sub);
+      font-size: .8rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition)
+    }
+
+    .tab-pill:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, .2)
+    }
+
+    .tab-pill.active {
+      background: var(--gold);
+      color: #fff;
+      border-color: var(--gold)
+    }
+
+    /* PROFIT TOTAL BANNER */
+    .profit-banner {
+      background: linear-gradient(135deg, rgba(46, 204, 113, .15), rgba(39, 174, 96, .08));
+      border: 1px solid rgba(46, 204, 113, .25);
+      border-radius: 14px;
+      padding: 22px 28px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      animation: fadeUp .5s ease
+    }
+
+    .profit-banner .p-ico {
+      font-size: 2.4rem
+    }
+
+    .profit-banner .p-val {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--green)
+    }
+
+    .profit-banner .p-lbl {
+      font-size: .82rem;
+      color: var(--adm-sub);
+      margin-top: 3px
+    }
+
+    /* EMPTY STATE */
+    .adm-empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--adm-sub);
+      font-size: .9rem
+    }
+
+    .adm-empty .e-ico {
+      font-size: 2.5rem;
+      margin-bottom: 10px
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    /* TABS SHOW/HIDE */
+    .tab-section {
+      display: none
+    }
+
+    .tab-section.active-tab {
+      display: block
+    }
+
+    /* mobile */
+    @media(max-width:768px) {
+      .sidebar {
+        display: none
+      }
+
+      .adm-content {
+        padding: 16px
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <h2>Lux<span>Stay</span></h2>
+      <p>Admin Management Portal</p>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-label">Overview</div>
+      <a class="sb-link active" onclick="showTab('overview')" href="#"><span class="ico">📊</span> Dashboard</a>
+      <div class="sb-label">Manage</div>
+      <a class="sb-link" onclick="showTab('bookings')" href="#"><span class="ico">📋</span> Bookings</a>
+      <a class="sb-link" onclick="showTab('users')" href="#"><span class="ico">👥</span> Users</a>
+      <a class="sb-link" onclick="showTab('profit')" href="#"><span class="ico">💰</span> Profit & Revenue</a>
+    </nav>
+    <div class="sb-bottom">
+      <div class="admin-info">
+        <div class="admin-avatar">{{ admin_name[0]|upper }}</div>
+        <div class="admin-info-text">
+          <p>{{ admin_name }}</p>
+          <small>Administrator</small>
+        </div>
+      </div>
+      <a href="/admin/logout" class="sb-logout" style="display:block;text-align:center;text-decoration:none">🚪 Sign
+        Out</a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="adm-main">
+    <div class="adm-topbar">
+      <div>
+        <h1 id="page-title">Dashboard Overview</h1>
+        <p>Welcome back, {{ admin_name }} — LuxStay Control Center</p>
+      </div>
+      <span class="tab-badge">🛡️ ADMIN</span>
+    </div>
+
+    <div class="adm-content">
+
+      <!-- ══ OVERVIEW TAB ══ -->
+      <div id="tab-overview" class="tab-section active-tab">
+        <div class="stats-grid">
+          <div class="stat-card" style="animation-delay:.0s">
+            <div class="stat-icon">📋</div>
+            <div class="stat-val">{{ total_bookings }}</div>
+            <div class="stat-lbl">Total Bookings</div>
+          </div>
+          <div class="stat-card yellow" style="animation-delay:.05s">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-val">{{ total_pending }}</div>
+            <div class="stat-lbl">Pending Review</div>
+          </div>
+          <div class="stat-card green" style="animation-delay:.1s">
+            <div class="stat-icon">✅</div>
+            <div class="stat-val">{{ total_accepted }}</div>
+            <div class="stat-lbl">Accepted</div>
+          </div>
+          <div class="stat-card red" style="animation-delay:.15s">
+            <div class="stat-icon">❌</div>
+            <div class="stat-val">{{ total_rejected }}</div>
+            <div class="stat-lbl">Rejected</div>
+          </div>
+          <div class="stat-card blue" style="animation-delay:.2s">
+            <div class="stat-icon">👤</div>
+            <div class="stat-val">{{ total_users }}</div>
+            <div class="stat-lbl">Registered Users</div>
+          </div>
+          <div class="stat-card gold" style="animation-delay:.25s">
+            <div class="stat-icon">💰</div>
+            <div class="stat-val">₱{{ "{:,.0f}".format(total_profit) }}</div>
+            <div class="stat-lbl">Total Revenue</div>
+          </div>
+        </div>
+
+        <!-- Profit Banner -->
+        <div class="profit-banner">
+          <div class="p-ico">💵</div>
+          <div>
+            <div class="p-val">₱{{ "{:,.2f}".format(total_profit) }}</div>
+            <div class="p-lbl">Total revenue from {{ total_accepted }} accepted booking(s)</div>
+          </div>
+        </div>
+
+        <!-- Recent bookings preview -->
+        <div class="adm-section">
+          <div class="adm-sec-hdr">
+            <h3>📋 Recent Bookings</h3>
+            <span>Showing latest 5</span>
+          </div>
+          {% if bookings %}
+          <div class="adm-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ref</th>
+                  <th>Guest</th>
+                  <th>Hotel</th>
+                  <th>Check-in</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in bookings[:5] %}
+                <tr>
+                  <td><strong style="color:var(--gold)">{{ b.ref_code }}</strong></td>
+                  <td>{{ b.guest_name or b.user }}</td>
+                  <td>{{ b.hotel }}</td>
+                  <td>{{ b.check_in }}</td>
+                  <td>
+                    {% set bst = b.status or 'pending' %}
+                    {% if bst == 'accepted' %}<span class="badge badge-accepted">✅ Accepted</span>
+                    {% elif bst == 'rejected' %}<span class="badge badge-rejected">❌ Rejected</span>
+                    {% else %}<span class="badge badge-pending">⏳ Pending</span>{% endif %}
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      {% if b.status == 'pending' %}
+                      <form method="POST" action="/admin/booking/{{ b.id }}/accept" style="display:inline">
+                        <button type="submit" class="act-btn btn-accept">✅ Accept</button>
+                      </form>
+                      <form method="POST" action="/admin/booking/{{ b.id }}/reject" style="display:inline">
+                        <button type="submit" class="act-btn btn-reject">❌ Reject</button>
+                      </form>
+                      {% endif %}
+                      <form method="POST" action="/admin/delete-booking/{{ b.id }}"
+                        onsubmit="return confirm('Delete this booking?')" style="display:inline">
+                        <button type="submit" class="act-btn btn-del">🗑️</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="adm-empty">
+            <div class="e-ico">📭</div>No bookings yet.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ══ BOOKINGS TAB ══ -->
+      <div id="tab-bookings" class="tab-section">
+        <div class="tab-row">
+          <button class="tab-pill active" onclick="filterStatus(this,'all')">All ({{ total_bookings }})</button>
+          <button class="tab-pill" onclick="filterStatus(this,'pending')">⏳ Pending ({{ total_pending }})</button>
+          <button class="tab-pill" onclick="filterStatus(this,'accepted')">✅ Accepted ({{ total_accepted }})</button>
+          <button class="tab-pill" onclick="filterStatus(this,'rejected')">❌ Rejected ({{ total_rejected }})</button>
+        </div>
+        {% if bookings %}
+        <div class="adm-table-wrap"
+          style="background:var(--adm-card);border:1px solid var(--adm-border);border-radius:0 0 16px 16px">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Ref Code</th>
+                <th>Guest</th>
+                <th>Hotel</th>
+                <th>Room</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Guests</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="booking-tbody">
+              {% for b in bookings %}
+              <tr class="brow" data-status="{{ b.status or 'pending' }}">
+                <td style="color:var(--adm-sub)">{{ loop.index }}</td>
+                <td><strong style="color:var(--gold)">{{ b.ref_code }}</strong></td>
+                <td>
+                  <div style="font-weight:600">{{ b.guest_name or '—' }}</div>
+                  <small style="color:var(--adm-sub)">{{ b.user }}</small>
+                </td>
+                <td>
+                  <div style="font-weight:600">{{ b.hotel }}</div>
+                  <small style="color:var(--adm-sub)">📍 {{ b.location }}</small>
+                </td>
+                <td><span class="badge"
+                    style="background:rgba(52,152,219,.12);color:#74b9ff;border:1px solid rgba(52,152,219,.2)">{{
+                    b.room_type }}</span></td>
+                <td>{{ b.check_in }}</td>
+                <td>{{ b.check_out }}</td>
+                <td style="text-align:center">{{ b.guests }}</td>
+                <td style="color:var(--green);font-weight:700">{{ b.price }}</td>
+                <td>
+                  {% set bst = b.status or 'pending' %}
+                  {% if bst == 'accepted' %}<span class="badge badge-accepted">✅ Accepted</span>
+                  {% elif bst == 'rejected' %}<span class="badge badge-rejected">❌ Rejected</span>
+                  {% else %}<span class="badge badge-pending">⏳ Pending</span>{% endif %}
+                </td>
+                <td>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    {% set bst2 = b.status or 'pending' %}
+                    {% if bst2 == 'pending' %}
+                    <form method="POST" action="/admin/booking/{{ b.id }}/accept" style="display:inline">
+                      <button type="submit" class="act-btn btn-accept">✅ Accept</button>
+                    </form>
+                    <form method="POST" action="/admin/booking/{{ b.id }}/reject" style="display:inline">
+                      <button type="submit" class="act-btn btn-reject">❌ Reject</button>
+                    </form>
+                    {% elif bst2 == 'accepted' %}
+                    <form method="POST" action="/admin/booking/{{ b.id }}/reject" style="display:inline">
+                      <button type="submit" class="act-btn btn-reject">↩ Reject</button>
+                    </form>
+                    {% elif bst2 == 'rejected' %}
+                    <form method="POST" action="/admin/booking/{{ b.id }}/accept" style="display:inline">
+                      <button type="submit" class="act-btn btn-accept">↩ Accept</button>
+                    </form>
+                    {% endif %}
+                    <form method="POST" action="/admin/delete-booking/{{ b.id }}"
+                      onsubmit="return confirm('Delete booking {{ b.ref_code }}?')" style="display:inline">
+                      <button type="submit" class="act-btn btn-del">🗑️ Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="adm-section">
+          <div class="adm-empty">
+            <div class="e-ico">📭</div>No bookings found.
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ══ USERS TAB ══ -->
+      <div id="tab-users" class="tab-section">
+        <div class="adm-section">
+          <div class="adm-sec-hdr">
+            <h3>👥 Registered Users</h3>
+            <span>{{ total_users }} user(s) total</span>
+          </div>
+          {% if users %}
+          <div class="adm-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                <tr>
+                  <td style="color:var(--adm-sub)">{{ loop.index }}</td>
+                  <td style="font-weight:600">{{ u.name or '—' }}</td>
+                  <td style="color:var(--adm-sub)">{{ u.email }}</td>
+                  <td>
+                    <form method="POST" action="/admin/delete-user/{{ u.id }}"
+                      onsubmit="return confirm('Delete user {{ u.email }} and all their bookings?')"
+                      style="display:inline">
+                      <button type="submit" class="act-btn btn-del">🗑️ Delete User</button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="adm-empty">
+            <div class="e-ico">👤</div>No registered users yet.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ══ PROFIT TAB ══ -->
+      <div id="tab-profit" class="tab-section">
+        <div class="profit-banner" style="margin-bottom:24px">
+          <div class="p-ico">💵</div>
+          <div>
+            <div class="p-val">₱{{ "{:,.2f}".format(total_profit) }}</div>
+            <div class="p-lbl">Total revenue from {{ total_accepted }} accepted booking(s)</div>
+          </div>
+        </div>
+
+        <div class="adm-section">
+          <div class="adm-sec-hdr">
+            <h3>🏨 Revenue by Hotel</h3>
+            <span>Accepted bookings only</span>
+          </div>
+          {% if hotel_stats %}
+          {% set max_rev = hotel_stats[0].revenue if hotel_stats[0].revenue > 0 else 1 %}
+          {% for h in hotel_stats %}
+          {% set bar_pct = (h.revenue / max_rev * 100) %}
+          {% set bar_pct = bar_pct if bar_pct <= 100 else 100 %} <div class="profit-row">
+            <div class="profit-hotel">{{ h.hotel }}<br><small style="color:var(--adm-sub);font-size:.75rem">{{ h.cnt }}
+                booking(s)</small></div>
+            <div class="profit-bar-wrap">
+              <div class="profit-bar" style="width:{{ bar_pct }}%"></div>
+            </div>
+            <div class="profit-amount">₱{{ "{:,.0f}".format(h.revenue) }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="adm-empty">
+          <div class="e-ico">💸</div>No accepted bookings yet. Accept bookings to track revenue.
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Booking counts per hotel -->
+      <div class="adm-section">
+        <div class="adm-sec-hdr">
+          <h3>📊 All Bookings by Hotel</h3>
+          <span>All statuses</span>
+        </div>
+        {% if booking_stats %}
+        {% set max_cnt = booking_stats[0].cnt if booking_stats[0].cnt > 0 else 1 %}
+        {% for h in booking_stats %}
+        {% set cnt_pct = (h.cnt / max_cnt * 100) %}
+        {% set cnt_pct = cnt_pct if cnt_pct <= 100 else 100 %} <div class="profit-row">
+          <div class="profit-hotel">{{ h.hotel }}</div>
+          <div class="profit-bar-wrap">
+            <div class="profit-bar" style="width:{{ cnt_pct }}%;background:linear-gradient(90deg,var(--blue),#2980b9)">
+            </div>
+          </div>
+          <div class="profit-amount" style="color:var(--blue)">{{ h.cnt }} booking(s)</div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="adm-empty">
+        <div class="e-ico">📭</div>No bookings yet.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  </div><!-- /adm-content -->
+  </div><!-- /adm-main -->
+
+  <script>
+    const titles = {
+      overview: 'Dashboard Overview',
+      bookings: 'Manage Bookings',
+      users: 'Manage Users',
+      profit: 'Profit & Revenue'
+    };
+
+    function showTab(name) {
+      document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active-tab'));
+      document.querySelectorAll('.sb-link').forEach(l => l.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active-tab');
+      document.querySelectorAll('.sb-link').forEach(l => {
+        if (l.getAttribute('onclick') && l.getAttribute('onclick').includes("'" + name + "'")) {
+          l.classList.add('active');
+        }
+      });
+      document.getElementById('page-title').textContent = titles[name] || 'Dashboard';
+    }
+
+    function filterStatus(btn, status) {
+      document.querySelectorAll('.tab-pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('#booking-tbody .brow').forEach(row => {
+        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+      });
+    }
+  </script>
+</body>
+
+</html>
